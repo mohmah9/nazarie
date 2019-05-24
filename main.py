@@ -20,6 +20,162 @@ class DFA :
         my_dfa["finals"]=self.finals
         print("DFA Done.")
 
+        file = open("output.txt" , "w")
+        file.write(str(self.state_num))
+        file.write("\n")
+        for i in self.alphabet:
+            file.write(i)
+            file.write(",")
+        file.write("\n")
+        file.write("->")
+        for i in self.trans_func:
+            if i[0] in self.finals:
+                file.write("*")
+            file.write(i[0])
+            file.write(",")
+            file.write(i[1])
+            file.write(",")
+            if i[2] in self.finals:
+                file.write("*")
+            file.write(i[2])
+            file.write("\n")
+        file.write("\n")
+        file.write("\n")
+        file.close()
+        self.minimization(my_dfa["states"])
+
+    def minimization(self,nodes):
+        nodes2 =nodes.copy()
+        matrix=[]
+        for i in nodes2:
+            matrix.append([])
+        for i in range(len(nodes2)):
+            for j in range(len(self.alphabet)):
+                matrix[i].append([])
+        for i in range(len(nodes2)):
+            nodes2[i]=[nodes2[i]]
+        # for i in range(len(self.alphabet)):
+        #     for j in range(len(nodes2)):
+        #         matrix[j][i]=self.node_finder(self.alphabet[i],nodes2[j])
+        non_omiting=[self.initial]
+        for i in range(1,len(self.states)):
+            for j in matrix:
+                if self.states[i] in j:
+                    non_omiting.append(self.states[i])
+                    break
+        for i in nodes:
+            if i not in non_omiting:
+                nodes2.remove([i])  #removing unreachable
+        first=[[]]
+        for i in self.states:
+            if i not in self.finals:
+                first[0].append(i)
+        first.append(self.finals)
+        # print(first)
+        for i in range(len(self.alphabet)):
+            for j in range(len(nodes)):
+                matrix[j][i]=self.node_finder(self.alphabet[i],nodes[j],first)
+        # print(matrix)
+        # print(nodes)
+        self.minimization2(nodes,first,matrix)
+    def minimization2(self,nodes,first,matrix):
+        nodes2=nodes.copy()
+        second=[]
+        temp=[]
+        for i in matrix:
+            j=self.duplicates(matrix,i)
+            for k in range(len(j)):
+                j[k]="q%d" %j[k]
+            if j not in temp:
+                temp.append(j)
+        second=temp
+        # print(matrix)
+        # print(second)
+        if second!= first:
+            for i in range(len(self.alphabet)):
+                for j in range(len(nodes)):
+                    matrix[j][i] = self.node_finder(self.alphabet[i], nodes[j], second)
+            self.minimization2(nodes,second,matrix)
+        else:
+            for i in range(len(self.alphabet)):
+                for j in range(len(nodes)):
+                    matrix[j][i] = self.node_finder(self.alphabet[i], nodes[j], second)
+            self.minimize_final(nodes,second,matrix)
+    def minimize_final(self,nodes,first,matrix):
+        second=[]
+        temp=[]
+        for i in matrix:
+            j=self.duplicates(matrix,i)
+            for k in range(len(j)):
+                j[k]="q%d" %j[k]
+            if j not in temp:
+                temp.append(j)
+        second=temp
+        # print(matrix)
+        # print(second)
+
+        d_states=[]
+        state_dic={}
+        matrix2=[]
+        for i in second:
+            matrix2.append(matrix[int(i[0][1:])])
+        matrix=matrix2
+        for i in range(len(second)):
+            d_states.append("g%d" %i)
+            state_dic[str(second[i])]=d_states[i]
+        for i in second :
+            if self.initial in i:
+                d_init=state_dic[str(i)]
+        d_finals=[]
+        for i in self.finals:
+            for j in second:
+                if i in j:
+                    d_finals.append(state_dic[str(j)])
+        d_stateNO=len(d_states)
+        d_alph=self.alphabet
+        for i in matrix:
+            for j in range(len(i)):
+                i[j]=state_dic[str(i[j])]
+        # print(matrix)
+        d_trans=[]
+        for i in range(len(d_states)):
+            for j in range(len(d_alph)):
+                d_trans.append([d_states[i],d_alph[j],matrix[i][j]])
+        print(d_states,d_init,d_finals,d_stateNO,d_alph,d_trans)
+        print("Minimization Done")
+        self.print_min(d_states,d_init,d_finals,d_stateNO,d_alph,d_trans)
+    def print_min(self,d_states,d_init,d_finals,d_stateNO,d_alph,d_trans):
+        file = open("output.txt" , "a+")
+        file.write(str(d_stateNO))
+        file.write("\n")
+        for i in d_alph:
+            file.write(i)
+            file.write(",")
+        file.write("\n")
+        file.write("->")
+        for i in d_trans:
+            if i[0] in d_finals:
+                file.write("*")
+            file.write(i[0])
+            file.write(",")
+            file.write(i[1])
+            file.write(",")
+            if i[2] in d_finals:
+                file.write("*")
+            file.write(i[2])
+            file.write("\n")
+        file.close()
+    def node_finder(self,alph,node,first):
+        for i in self.trans_func:
+            if i[0] == node:
+                if i[1] == alph:
+                    for j in first:
+                        if i[2] in j:
+                            return j
+
+    def duplicates(self,lst, item):
+        return [i for i, x in enumerate(lst) if x == item]
+
 class NFA :
 
     def __init__(self ,states,alphabet,initial,trans_func ,state_num, finals):
@@ -55,7 +211,6 @@ class NFA :
                     if k == j[0]:
                         if j[1]== '_':
                             landa[i].append(j[2])
-
         # landa is our new self.states
         closure=[[landa[0] ,]]
         for i in closure:
